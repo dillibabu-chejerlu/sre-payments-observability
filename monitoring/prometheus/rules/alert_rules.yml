@@ -1,0 +1,52 @@
+# SLO: 99.9% availability over 30 days -> error budget = 0.1% (0.001)
+# Multi-window, multi-burn-rate alerts (Google SRE Workbook, ch. 5)
+groups:
+  - name: payments-slo-alerts
+    rules:
+      - alert: PaymentsErrorBudgetFastBurn
+        expr: |
+          slo:sli_error:ratio_rate1h > (14.4 * 0.001)
+          and slo:sli_error:ratio_rate5m > (14.4 * 0.001)
+        for: 2m
+        labels:
+          severity: page
+          team: sre
+        annotations:
+          summary: "Payments API burning error budget 14.4x too fast"
+          description: "At this rate 2% of the monthly budget is gone in 1h. Error ratio (5m): {{ $value | humanizePercentage }}"
+          runbook_url: "https://github.com/YOUR_USERNAME/sre-payments-observability/blob/main/docs/runbook.md#payments-error-budget-burn"
+
+      - alert: PaymentsErrorBudgetSlowBurn
+        expr: |
+          slo:sli_error:ratio_rate6h > (6 * 0.001)
+          and slo:sli_error:ratio_rate30m > (6 * 0.001)
+        for: 15m
+        labels:
+          severity: ticket
+          team: sre
+        annotations:
+          summary: "Payments API steadily burning error budget (6x)"
+          description: "5% of the monthly budget consumed in 6h."
+          runbook_url: "https://github.com/YOUR_USERNAME/sre-payments-observability/blob/main/docs/runbook.md#payments-error-budget-burn"
+
+      - alert: PaymentsHighLatencyP99
+        expr: slo:latency_p99:5m > 0.5
+        for: 5m
+        labels:
+          severity: page
+          team: sre
+        annotations:
+          summary: "Payments API p99 latency above 500ms"
+          description: "p99 latency is {{ $value | humanizeDuration }}"
+          runbook_url: "https://github.com/YOUR_USERNAME/sre-payments-observability/blob/main/docs/runbook.md#payments-high-latency"
+
+      - alert: PaymentsApiDown
+        expr: up{job="payments-api"} == 0
+        for: 1m
+        labels:
+          severity: page
+          team: sre
+        annotations:
+          summary: "Payments API target is down"
+          description: "Prometheus cannot scrape {{ $labels.instance }}"
+          runbook_url: "https://github.com/YOUR_USERNAME/sre-payments-observability/blob/main/docs/runbook.md#payments-api-down"

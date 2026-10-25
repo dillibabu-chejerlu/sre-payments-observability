@@ -1,0 +1,25 @@
+# SLI = fraction of /api/* requests that did NOT return 5xx
+groups:
+  - name: payments-sli
+    interval: 30s
+    rules:
+      - record: slo:sli_error:ratio_rate5m
+        expr: |
+          sum(rate(http_requests_total{job="payments-api",route=~"/api/.*",status=~"5.."}[5m]))
+          / sum(rate(http_requests_total{job="payments-api",route=~"/api/.*"}[5m]))
+      - record: slo:sli_error:ratio_rate30m
+        expr: |
+          sum(rate(http_requests_total{job="payments-api",route=~"/api/.*",status=~"5.."}[30m]))
+          / sum(rate(http_requests_total{job="payments-api",route=~"/api/.*"}[30m]))
+      - record: slo:sli_error:ratio_rate1h
+        expr: |
+          sum(rate(http_requests_total{job="payments-api",route=~"/api/.*",status=~"5.."}[1h]))
+          / sum(rate(http_requests_total{job="payments-api",route=~"/api/.*"}[1h]))
+      - record: slo:sli_error:ratio_rate6h
+        expr: |
+          sum(rate(http_requests_total{job="payments-api",route=~"/api/.*",status=~"5.."}[6h]))
+          / sum(rate(http_requests_total{job="payments-api",route=~"/api/.*"}[6h]))
+      - record: slo:latency_p99:5m
+        expr: |
+          histogram_quantile(0.99,
+            sum by (le) (rate(http_request_duration_seconds_bucket{job="payments-api",route=~"/api/.*"}[5m])))

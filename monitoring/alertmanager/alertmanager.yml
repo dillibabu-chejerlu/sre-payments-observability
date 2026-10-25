@@ -1,0 +1,35 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: default
+  group_by: [alertname, severity]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: [severity="page"]
+      receiver: oncall-pager
+      repeat_interval: 1h
+    - matchers: [severity="ticket"]
+      receiver: ticket-queue
+
+receivers:
+  # In production these would be PagerDuty / ServiceNow / Slack / MS Teams.
+  # For the demo they POST to the app's webhook, which logs the alert.
+  - name: default
+    webhook_configs:
+      - url: http://payments-api:8000/admin/alert-webhook
+  - name: oncall-pager
+    webhook_configs:
+      - url: http://payments-api:8000/admin/alert-webhook
+        send_resolved: true
+  - name: ticket-queue
+    webhook_configs:
+      - url: http://payments-api:8000/admin/alert-webhook
+
+inhibit_rules:
+  # If the API is down, don't also page for latency/error budget
+  - source_matchers: [alertname="PaymentsApiDown"]
+    target_matchers: [team="sre"]
+    equal: [team]
